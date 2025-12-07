@@ -33,4 +33,4 @@ Plot instructions:
 6. Do not `plt.show()`
 7. use the `generate_graph_filepath_tool` tool to obtain path to save graph. 
 
-Synthesize a concise response to the user's question; Do not interpret the results.
+Synthesize a concise response to the user's question; No further clarifications are allowed on your end. Do not interpret the results.
