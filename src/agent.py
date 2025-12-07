@@ -12,7 +12,6 @@ matplotlib.use('Agg') # non-interactive backend
 import logging
 
 from tools import document_search_tool, convert_gene_tool, gene_metadata_tool, langchain_query_sql_tool, python_repl_tool, python_execute_sql_query_tool, display_plot_tool, generate_graph_filepath_tool
-from utils import format_text_message
 
 # Create a system message for the agent
 # dynamic variables will be filled in at the start of each session
@@ -32,8 +31,8 @@ def create_system_message() -> str:
 async def send_init_prompt(app:FastAPI):
     global graph
     global config_ask
-    config_init = {"configurable": {"thread_id": app.state.username, "recursion_limit": 5}} # init configuration
-    config_ask = {"configurable": {"thread_id": app.state.username, "recursion_limit": 50}} # ask configuration
+    config_init = {"thread_id": app.state.username, "recursion_limit": 5} # init configuration
+    config_ask = {"thread_id": app.state.username, "recursion_limit": 50} # ask configuration
 
     #  initialize the chat model
     model_id = os.environ.get("MODEL_ID")
@@ -94,24 +93,7 @@ def query_agent(user_input: str):
     user_message = HumanMessage(content=user_input)
     
     for step in graph.stream({"messages": [user_message]}, config_ask, stream_mode="updates"):
-        print(step)
-        pretty = json.dumps(step, indent=2, ensure_ascii=False, default=str)
-        yield pretty
-        chunks = None
-        if "agent" in step:
-            chunks = step["agent"]["messages"][-1].content
-            if isinstance(chunks, list):
-                for chunk in chunks:
-                        if chunk["type"]=="text":
-                            chunk = format_text_message(chunk)
-                            yield str(chunk)
-            elif isinstance(chunks, dict):
-                if chunk["type"]=="text":
-                    chunk = format_text_message(chunk)
-                    yield str(chunk)
-            else:
-                if chunks!="":
-                    yield format_text_message(chunks)
+        yield step
 
 async def handle_invalid_chat_history(app: FastAPI, e: Exception):
         global graph

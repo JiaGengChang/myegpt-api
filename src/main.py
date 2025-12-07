@@ -46,7 +46,7 @@ async def ask(query: Query):
     def generate_response():
         for chunk in query_agent(query.user_input):
             yield chunk
-    return StreamingResponse(generate_response(), media_type="application/json")
+    return StreamingResponse(generate_response(), media_type="text/plain")
 
 if __name__ == "__main__":
     import uvicorn
