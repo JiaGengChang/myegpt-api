@@ -12,6 +12,7 @@ matplotlib.use('Agg') # non-interactive backend
 import logging
 
 from tools import document_search_tool, convert_gene_tool, gene_metadata_tool, langchain_query_sql_tool, python_repl_tool, python_execute_sql_query_tool, display_plot_tool, generate_graph_filepath_tool
+from utils import format_text_message, format_tool_message
 
 # Create a system message for the agent
 # dynamic variables will be filled in at the start of each session
@@ -93,7 +94,30 @@ def query_agent(user_input: str):
     user_message = HumanMessage(content=user_input)
     
     for step in graph.stream({"messages": [user_message]}, config_ask, stream_mode="updates"):
-        yield step
+        pretty = json.dumps(step, indent=2, ensure_ascii=False, default=str)
+        print(pretty)
+        if "agent" in step:
+            print("^Agent message detected")
+            chunks = step["agent"]["messages"][-1].content
+            if isinstance(chunks, list):
+                for chunk in chunks:
+                        if chunk["type"]=="text":
+                            chunk = format_text_message(chunk)
+                            yield str(chunk)
+            elif isinstance(chunks, dict):
+                if chunk["type"]=="text":
+                    chunk = format_text_message(chunk)
+                    yield str(chunk)
+            else:
+                if chunks!="":
+                    yield format_text_message(chunks)
+        elif "tools" in step:
+            print("^Tools message detected")
+            chunks = step["tool"]["messages"][-1]
+            yield format_tool_message(chunks)
+        else:
+            print("^Message detected is neither agent or tools message")
+            yield str(step)
 
 async def handle_invalid_chat_history(app: FastAPI, e: Exception):
         global graph

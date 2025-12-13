@@ -55,17 +55,24 @@ async def main():
 
             async def target(inputs: dict) -> dict:
                 async with session.post(
-                    os.path.join(os.environ.get("SERVER_BASE_URL"),'api', 'ask'),
+                    os.path.join(os.environ.get("SERVER_BASE_URL"), 'api', 'ask'),
                     headers={
                         "Content-Type": "application/json",
                     },
                     json={"user_input": str(inputs)},
                 ) as response:
-                    raw_answer = await response.text()
-                    processed_answer = re.sub(r'(?s).*?(?=💬)', '', raw_answer)
-                    output = {"answer": processed_answer}
-                    results.append({"input": inputs,
-                                    "output": output})
+                    chunks = []
+                    async for chunk in response.content.iter_chunked(1024):
+                        if not chunk:
+                            continue
+                        chunks.append(chunk.decode("utf-8", errors="ignore"))
+
+                    answer = "".join(chunks)
+                    output = {"answer": answer}
+                    results.append({
+                        "input": inputs,
+                        "output": output
+                    })
                     return output
 
             await client.aevaluate(
