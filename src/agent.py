@@ -45,10 +45,9 @@ async def send_init_prompt(app:FastAPI):
         from langchain_anthropic import ChatAnthropic as ChatModel
     elif model_id.startswith("gemini"):
         from langchain_google_genai import ChatGoogleGenerativeAI as ChatModel
-    elif model_id.startswith("apac."):
-        from langchain_aws import ChatBedrockConverse as ChatModel
     else:
-        raise ValueError(f"Unsupported MODEL_ID prefix in {model_id}")
+        f"Defaulting to Bedrock as {model_id} does not match known providers"
+        from langchain_aws import ChatBedrockConverse as ChatModel
     
     try:
         # Google, Claude, OpenAI use "model" parameter
