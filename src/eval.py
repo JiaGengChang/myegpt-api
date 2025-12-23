@@ -87,7 +87,7 @@ async def main():
                     'eval_llm': os.environ.get("EVAL_MODEL_ID"),
                 }
             )
-            with open(f"../responses/{os.environ.get('LANGSMITH_PROJECT')}.json", "w") as f:
+            with open(f"../responses/microdocs/{os.environ.get('LANGSMITH_PROJECT')}.json", "w") as f:
                 json.dump(results, f, indent=2)
 
         except Exception as e:

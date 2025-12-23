@@ -18,7 +18,7 @@ llm = ChatOpenAI(
 )
 
 # Load the failed examples JSON file
-with open('src/responses.json', 'r') as f:
+with open(f"src/responses/microdocs/{os.environ.get('LANGSMITH_PROJECT')}.json", 'r') as f:
     failed_examples = json.load(f)
 
 def target(inputs: dict) -> dict:
