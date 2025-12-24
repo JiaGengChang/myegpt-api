@@ -48,7 +48,7 @@ async def main():
     if eval_dataset_name:
         print(f"Using eval dataset: {eval_dataset_name}")
     else:
-        eval_dataset_name = input("Select eval dataset (options: \"test\", \"test-hard\", \"myegpt-22Dec25\"):")
+        eval_dataset_name = input("Select eval dataset (options: \"myegpt-22Dec25\" (default), \"test\", or \"test-hard\"):") or "myegpt-22Dec25"
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
         try:
             results = []
