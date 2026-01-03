@@ -27,7 +27,6 @@ if __name__ == "__main__":
 
     def target(inputs: dict) -> dict:
         global examples_to_evaluate
-        print('dataset input: ',inputs)
         # Find matching input and return the output
         for example in tqdm(examples_to_evaluate):
             if example.get('input').get('question') == inputs['question']:
