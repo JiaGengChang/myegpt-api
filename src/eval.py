@@ -1,55 +1,39 @@
 import os
-import re
 from dotenv import load_dotenv
 assert load_dotenv(os.path.join(os.path.dirname(__file__), '.env_eval'))
 from langsmith import Client
-from openevals.llm import create_llm_as_judge
-from prompts import CORRECTNESS_PROMPT
 import aiohttp
 import asyncio
 import json
+import re
+# local objects
+from llm_utils import universal_chat_model, make_scorer_with_llm
 
-# Define the input and reference output pairs that you'll use to evaluate your app
-client = Client()
-
-eval_model_id = os.environ.get("EVAL_MODEL_ID")
-if not eval_model_id:
-    raise ValueError("EVAL_MODEL_ID environment variable is not set")
-elif eval_model_id.startswith("gpt-"):
-    from langchain_openai import ChatOpenAI
-    llm = ChatOpenAI(
-        model=eval_model_id,
-        temperature=0.,
-    )
-else:
-    from langchain_aws import ChatBedrockConverse
-    llm = ChatBedrockConverse(
-        model_id=eval_model_id,
-        temperature=0.,
-    )
-
-# a correctness score from 0 to 1, where 1 is the best
-def scorer(inputs: dict, outputs: dict, reference_outputs: dict):
-    evaluator = create_llm_as_judge(
-        prompt=CORRECTNESS_PROMPT,
-        judge=llm,
-        feedback_key="score",
-        continuous=True,
-    )
-    eval_result = evaluator(
-        inputs=inputs,
-        outputs=outputs,
-        reference_outputs=reference_outputs
-    )
-    return eval_result
-
+# full procedure of invoke response and evaluating with LLM as a judge
 async def main():
     eval_dataset_name = os.environ.get("EVAL_DATASET_NAME")
     if eval_dataset_name:
         print(f"Using eval dataset: {eval_dataset_name}")
     else:
-        eval_dataset_name = input("Select eval dataset (options: \"myegpt-22Dec25\" (default), \"test\", or \"test-hard\"):") or "myegpt-22Dec25"
-    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
+        eval_dataset_name = input("Select eval dataset. One of: \"myegpt-22Dec25\" (default), \"test\", or \"test-hard\":") or "myegpt-22Dec25"
+    
+    splits = os.environ.get("EVAL_SPLIT")
+    if splits:
+        splits = re.split(r'\s*,\s*', splits)
+        print(f"Using eval dataset splits: {splits}")
+    else:
+        splits = input("Enter split. One of \"base\" (default), \"easy\", \"medium\", \"hard\"):") or "base"
+        
+    OUTPUT_JSON = f"../responses/microdocs/{eval_dataset_name}/{os.environ.get('LANGSMITH_PROJECT')}.json"
+
+    # Define the input and reference output pairs that you'll use to evaluate your app
+    client = Client()
+
+    eval_llm = universal_chat_model(os.environ.get("EVAL_MODEL_ID"))
+    scorer = make_scorer_with_llm(eval_llm)
+
+    timeout = aiohttp.ClientTimeout(total=600)  # total timeout of 600 seconds
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False),timeout=timeout) as session:
         try:
             results = []
 
@@ -77,7 +61,7 @@ async def main():
 
             await client.aevaluate(
                 target,
-                data=client.list_examples(dataset_name=eval_dataset_name, splits=[os.environ.get("EVAL_SPLIT")]),
+                data=client.list_examples(dataset_name=eval_dataset_name, splits=splits),
                 evaluators=[scorer],
                 max_concurrency=0,
                 num_repetitions=1,
@@ -87,7 +71,7 @@ async def main():
                     'eval_llm': os.environ.get("EVAL_MODEL_ID"),
                 }
             )
-            with open(f"../responses/microdocs/{os.environ.get('LANGSMITH_PROJECT')}.json", "w") as f:
+            with open(f"../responses/microdocs/{eval_dataset_name}/{os.environ.get('LANGSMITH_PROJECT')}.json", "w") as f:
                 json.dump(results, f, indent=2)
 
         except Exception as e:
