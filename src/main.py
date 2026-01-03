@@ -10,7 +10,13 @@ import uuid
 from agent import send_init_prompt, query_agent
 from models import Query
 
-auth_db_conn = psycopg.connect(os.environ.get("COMMPASS_AUTH_DSN"))
+print(f"LLM model ID:\t\t\t{os.environ.get('MODEL_ID')}")
+print(f"Embeddings model provider:\t{os.environ.get('EMBEDDINGS_MODEL_PROVIDER')}")
+print(f"Langsmith Project Name:\t\t{os.environ.get('LANGSMITH_PROJECT')}")
+confirm = input("Press Enter to confirm:").strip()
+if confirm != "":
+    print("Update model IDs and restart the app.")
+    exit(0)
 
 app = FastAPI()
 
