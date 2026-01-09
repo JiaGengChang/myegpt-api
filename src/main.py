@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import psycopg
 import uuid
 
 # src modules
@@ -61,5 +60,5 @@ if __name__ == "__main__":
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=8888,
+        port=8080,
     )

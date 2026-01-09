@@ -1,15 +1,12 @@
 import os
 import json
-from pprint import pformat
 from fastapi import FastAPI
 from langchain_community.utilities import SQLDatabase
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.prebuilt import create_react_agent
 import matplotlib
-import psycopg
 matplotlib.use('Agg') # non-interactive backend
-import logging
 
 from tools import document_search_tool, convert_gene_tool, gene_metadata_tool, gene_level_copy_number_tool, cox_regression_base_data_tool, langchain_query_sql_tool, python_repl_tool, python_execute_sql_query_tool, display_plot_tool, generate_graph_filepath_tool
 from llm_utils import universal_chat_model
