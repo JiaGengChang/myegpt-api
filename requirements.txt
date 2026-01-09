@@ -1,3 +1,4 @@
+aiofiles
 dotenv
 fastapi[standard-no-fastapi-cloud-cli]
 fastapi-mail
