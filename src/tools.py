@@ -8,6 +8,7 @@ from langchain_experimental.tools import PythonAstREPLTool
 from langchain_community.utilities import SQLDatabase
 from langchain_community.tools import QuerySQLDatabaseTool
 
+from variables import COMMPASS_DSN, COMMPASS_DB_URI
 from vectorstore import connect_store
 
 filedir = os.path.dirname(os.path.abspath(__file__))
@@ -46,7 +47,7 @@ gene_metadata_tool = StructuredTool.from_function(
 )
 
 def execute_sql_query_with_python(query: str):
-    conn = psycopg.connect(os.environ.get("COMMPASS_DSN"))
+    conn = psycopg.connect(COMMPASS_DSN)
     with conn.cursor() as curs:
         curs.execute(re.sub(r'LIMIT \d+', '', query, flags=re.IGNORECASE))
         result = curs.fetchall()
@@ -69,7 +70,7 @@ python_execute_sql_query_tool = StructuredTool.from_function(
 python_repl_tool = PythonAstREPLTool()
 
 # create a QUERY SQL tool
-db_uri = os.environ.get("COMMPASS_DB_URI")
+db_uri = COMMPASS_DB_URI
 db = SQLDatabase.from_uri(db_uri)
 langchain_query_sql_tool = QuerySQLDatabaseTool(db=db)
 
@@ -139,7 +140,7 @@ def _max_overlapping_segment(gene_stable_id: str):
     # sort by overlap length between probe and gene
     #  PROBE =====1    |     =====2 |  =====3         |           ====4  |     ===5       |  ==========6
     #  GENES   =====1  |  =====2    |          ====3  |  =====4          |  ===========5. |.    ====6
-    conn = psycopg.connect(os.environ.get("COMMPASS_DSN"))
+    conn = psycopg.connect(COMMPASS_DSN)
     with conn.cursor() as curs:
         curs.execute('SELECT * FROM genome_gatk_cna WHERE chromosome = %s', (gc,))
         result = curs.fetchall()
