@@ -1,35 +1,37 @@
 import os
 from dotenv import load_dotenv
-assert load_dotenv(os.path.join(os.path.dirname(__file__), '.env_eval'))
+assert load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 from langsmith import Client
 import aiohttp
 import asyncio
 import json
-import re
+from variables import SERVER_BASE_URL, EVAL_MODEL_ID
+
 # local objects
 from llm_utils import universal_chat_model, make_scorer_with_llm
+from variables import MODEL_ID, EMBEDDINGS_MODEL_PROVIDER, LANGSMITH_PROJECT
 
 # full procedure of invoke response and evaluating with LLM as a judge
 async def main():
-    eval_dataset_name = os.environ.get("EVAL_DATASET_NAME")
-    if eval_dataset_name:
-        print(f"Using eval dataset: {eval_dataset_name}")
-    else:
-        eval_dataset_name = input("Select eval dataset. One of: \"myegpt-22Dec25\" (default), \"test\", or \"test-hard\":") or "myegpt-22Dec25"
-    
-    splits = os.environ.get("EVAL_SPLIT")
-    if splits:
-        splits = re.split(r'\s*,\s*', splits)
-        print(f"Using eval dataset splits: {splits}")
-    else:
-        splits = input("Enter split. One of \"base\" (default), \"easy\", \"medium\", \"hard\"):") or "base"
+    print(f"LLM model ID:\t\t\t{MODEL_ID}")
+    print(f"Embeddings model provider:\t{EMBEDDINGS_MODEL_PROVIDER}")
+    print(f"Langsmith Project Name:\t\t{LANGSMITH_PROJECT}")
+    confirm = input("Press Enter to confirm:").strip()
+    if confirm != "":
+        print("Update model IDs and restart the app.")
+        exit(0)
+
+    eval_dataset_name = input("Select eval dataset. One of: \"myegpt-22Dec25\" (default), \"test\", or \"test-hard\":") or "myegpt-22Dec25"
+    splits = input("Enter split. One of \"base\" (default), \"easy\", \"medium\", \"hard\"):") or "base"
         
-    OUTPUT_JSON = f"../responses/microdocs/{eval_dataset_name}/{os.environ.get('LANGSMITH_PROJECT')}.json"
+    OUTPUT_JSON = f"../responses/examination/{eval_dataset_name}/{LANGSMITH_PROJECT}.json"
+    if not os.path.exists(os.path.dirname(OUTPUT_JSON)):
+        os.makedirs(os.path.dirname(OUTPUT_JSON))
 
     # Define the input and reference output pairs that you'll use to evaluate your app
     client = Client()
 
-    eval_llm = universal_chat_model(os.environ.get("EVAL_MODEL_ID"))
+    eval_llm = universal_chat_model(EVAL_MODEL_ID)
     scorer = make_scorer_with_llm(eval_llm)
 
     timeout = aiohttp.ClientTimeout(total=600)  # total timeout of 600 seconds
@@ -39,14 +41,14 @@ async def main():
 
             async def target(inputs: dict) -> dict:
                 async with session.post(
-                    os.path.join(os.environ.get("SERVER_BASE_URL"), 'api', 'ask'),
+                    os.path.join(SERVER_BASE_URL, 'api', 'ask'),
                     headers={
                         "Content-Type": "application/json",
                     },
                     json={"user_input": str(inputs)},
-                ) as response:
+                ) as response_ask:
                     chunks = []
-                    async for chunk in response.content.iter_chunked(1024):
+                    async for chunk in response_ask.content.iter_chunked(4096):
                         if not chunk:
                             continue
                         chunks.append(chunk.decode("utf-8", errors="ignore"))
@@ -65,13 +67,13 @@ async def main():
                 evaluators=[scorer],
                 max_concurrency=0,
                 num_repetitions=1,
-                experiment_prefix=os.environ.get("LANGSMITH_PROJECT"),
+                experiment_prefix=LANGSMITH_PROJECT,
                 metadata={
-                    'app_llm': os.environ.get("MODEL_ID"),
-                    'eval_llm': os.environ.get("EVAL_MODEL_ID"),
+                    'app_llm': MODEL_ID,
+                    'eval_llm': EVAL_MODEL_ID,
                 }
             )
-            with open(f"../responses/microdocs/{eval_dataset_name}/{os.environ.get('LANGSMITH_PROJECT')}.json", "w") as f:
+            with open(OUTPUT_JSON, "w") as f:
                 json.dump(results, f, indent=2)
 
         except Exception as e:
