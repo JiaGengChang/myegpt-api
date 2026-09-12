@@ -10,18 +10,18 @@ matplotlib.use('Agg') # non-interactive backend
 
 from tools import convert_gene_tool, gene_metadata_tool, gene_level_copy_number_tool, cox_regression_base_data_tool, langchain_query_sql_tool, python_repl_tool, python_execute_sql_query_tool, display_plot_tool, generate_graph_filepath_tool
 from llm_utils import universal_chat_model
+from variables import COMMPASS_DB_URI, MODEL_ID
 
 # Create a system message for the agent
 # dynamic variables will be filled in at the start of each session
 # removed db description
 def create_system_message() -> str:
-    db_uri = os.environ.get("COMMPASS_DB_URI")
-    db = SQLDatabase.from_uri(db_uri)
+    db = SQLDatabase.from_uri(COMMPASS_DB_URI)
     with open(f'{os.path.dirname(__file__)}/prompt.txt', 'r') as f:
         latent_system_message = f.read()
     system_message = latent_system_message.format(
         dialect=db.dialect,
-        commpass_db_uri=db_uri
+        commpass_db_uri=COMMPASS_DB_URI
     )
     return [HumanMessage(content='Hello, MyeGPT!'),
             SystemMessage(content=system_message)]
@@ -33,7 +33,7 @@ async def send_init_prompt(app:FastAPI):
     config_ask = {"thread_id": app.state.username, "recursion_limit": 50} # ask configuration
 
     #  initialize the chat model
-    llm = universal_chat_model(os.environ.get("MODEL_ID"))
+    llm = universal_chat_model(MODEL_ID)
     
     graph = create_react_agent(
         model=llm,
